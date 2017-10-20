@@ -17,9 +17,6 @@
 using namespace std;
 
 
-/*
- * Global Variables
- */
 const int goal[3][3]   = { { 1, 2, 3 }, 
                            { 4, 5, 6 }, 
                            { 7, 8, 0 } };
@@ -38,11 +35,10 @@ const int doable[3][3] = { { 0, 1, 2 },
 
 
 struct Node {
-    int g;                  // Holds g(n) for uniform fxn
-    int h;                  // Holds h(n) for heuristic fxn
+    int g;                  // Holds g(n) for uniform function
+    int h;                  // Holds h(n) for heuristic function
     int** puzzle;           // Points to puzzle 
     Node* parent;           // Points to parent for backtrace
-
 
     Node() {
         g = 0;
@@ -55,7 +51,7 @@ struct Node {
         }
     }
 
-
+    // Used to create the first Node.
     Node(int g, int h, int** newPuzzle, Node* p) 
             : g(g), h(h), parent(p) {
         
@@ -71,7 +67,7 @@ struct Node {
         }
     }
 
-
+    // Used to create more Nodes easily
     Node(Node* newNode) : g(newNode->g), h(newNode->h), parent(newNode->parent){
         
         puzzle = new int*[3];
@@ -86,7 +82,6 @@ struct Node {
         }
     }
 
-
     bool CheckGoal() {
         for (int i = 0; i < 3; i++) {
             for (int j = 0; j< 3; j++) {
@@ -98,63 +93,6 @@ struct Node {
         return true;
     }
 
-
-    void Expand() {
-        int xpos, ypos;
-
-        if ( CheckGoal() ) {
-            cout << "Goal State Reached After Expanding" << endl;
-            exit(0);
-        }
-
-        for (int i = 0; i < 3; i++) {
-            for (int j = 0; j < 3; j++) {
-                if (puzzle[i][j] == 0) {
-                    xpos = i;
-                    ypos = j;
-                }
-            }
-        }
-        
-
-        /*
-        // Moving Tile UP
-        if (xpos != 0) {
-            int temp = puzzle[xpos-1][ypos];
-            puzzle[xpos][ypos] = temp;
-            puzzle[xpos-1][ypos] = 0;
-        }
-        */
-
-        
-        // Moving Tile DOWN
-        if (xpos != 2) {
-            int temp = puzzle[xpos+1][ypos];
-            puzzle[xpos][ypos] = temp;
-            puzzle[xpos+1][ypos] = 0;
-        }
-        
-
-        /*
-        // Moving Tile LEFT
-        if (ypos != 0) {
-            int temp = puzzle[xpos][ypos-1];
-            puzzle[xpos][ypos] = temp;
-            puzzle[xpos][ypos-1] = 0;
-        }
-        */
-
-        /*
-        // Moving Tile RIGHT
-        if (ypos != 2) {
-            int temp = puzzle[xpos][ypos+1];
-            puzzle[xpos][ypos] = temp;
-            puzzle[xpos][ypos+1] = 0;
-        }
-        */
-    }
-
-
     ~Node() {
         for(int i = 0; i < 3; ++i) {
             delete [] puzzle[i];
@@ -163,50 +101,70 @@ struct Node {
 };
 
 
-/*
- * PROTOTYPES
- */
+// Taken from 
+// https://stackoverflow.com/questions/6339970/c-using-function-as-parameter
+typedef int (* vFunctionCall)(int** args); 
+
 char DisplayPuzzleTypeOptions();
 void PrintPuzzle(int**);
-int MissPlacedTile(const Node*);
-int ManhattanDistance(const Node*);
-
-
+void PrintNode(const Node*);
+void Expand(Node*, vFunctionCall f);
+int MissPlacedTile(int**);
+int ManhattanDistance(int**);
+int NoHeuristic(int**);
+void GeneralSearch(int**, vFunctionCall f);
 queue<Node*> tree;         // Holds the min of f(n) = g(n) + h(n)
 
 
-/*
- * MAIN FUNCTION
- */
 int main() {
-    Node *init;
-    init = new Node;
+    int** p;
+    p = new int*[3];
+    for (int i = 0; i < 3; i++) {
+        p[i] = new int[3];
+    }
 
-    init->puzzle[0][0] = 0;
-    init->puzzle[0][1] = 1;
-    init->puzzle[0][2] = 2;
-    init->puzzle[1][0] = 4;
-    init->puzzle[1][1] = 5;
-    init->puzzle[1][2] = 8;
-    init->puzzle[2][0] = 7;
-    init->puzzle[2][1] = 3;
-    init->puzzle[2][2] = 6;
-    PrintPuzzle(init->puzzle);
+    p[0][0] = 1;
+    p[0][1] = 2;
+    p[0][2] = 3;
+    p[1][0] = 4;
+    p[1][1] = 0;
+    p[1][2] = 6;
+    p[2][0] = 7;
+    p[2][1] = 8;
+    p[2][2] = 5;
 
-    cout << "Manhattan Distance: ";
-    int tiles = ManhattanDistance(init);
-    cout << tiles << endl << endl;
+    GeneralSearch(p, (vFunctionCall)ManhattanDistance);    
 
     // char puzzleType = DisplayPuzzleTypeOptions();
-
-    delete init;
     return 0;
 }
 
 
-/*
- * HELPER FUNCTIONS
- */
+void GeneralSearch(int** p, vFunctionCall f) {
+
+    // Making node with: 
+    //     Uniform cost set to 0.
+    //     Heuristic set to an int returned by the function pointer;
+    //         Function pointer can be ManhattanDistance(),
+    //         MissPlacedTile(), or NoHeuristic().
+    //     A copy of the initial puzzle from main.
+    //     It's parent attribute set to NULL to signify root of tree.
+    Node* init = new Node(0, f(p), p, NULL);
+    tree.push(init);
+
+    Expand(init, f);
+
+
+
+    while (!tree.empty()) {
+        PrintNode(tree.front());
+        tree.pop();
+    }
+
+    delete init;
+}
+
+
 char DisplayPuzzleTypeOptions() {
     char puzzleType;
 
@@ -233,7 +191,7 @@ void PrintPuzzle(int** p) {
                 cout << p[i][j] << " ";
             }
             else {
-                cout << "B ";
+                cout << "| ";
             }
         }
         cout << endl;
@@ -242,11 +200,85 @@ void PrintPuzzle(int** p) {
 }
 
 
-int MissPlacedTile(const Node* n) {
-    int temp = 0;
+void PrintNode(const Node* n) {
+    cout << "\tUniform cost: " << n->g << endl;
+    cout << "\tHeuristic Value: " << n->h << endl;
+    PrintPuzzle(n->puzzle);
+}
+
+
+void Expand(Node* n, vFunctionCall f) {
+    int xpos, ypos;
+
+    if ( n->CheckGoal() ) {
+        cout << "Goal State Reached After Expanding" << endl;
+        exit(0);
+    }
+
+    // Get x-axis and y-axis positions of blank tile
     for (int i = 0; i < 3; i++) {
         for (int j = 0; j < 3; j++) {
-            if ((n->puzzle[i][j] != 0) && (n->puzzle[i][j] != goal[i][j])) {
+            if (n->puzzle[i][j] == 0) {
+                xpos = i;
+                ypos = j;
+            }
+        }
+    }
+
+    // Moving Tile UP
+    if (xpos != 0) {
+        Node* newNode = new Node(n);
+        int temp = newNode->puzzle[xpos-1][ypos];
+        newNode->puzzle[xpos][ypos] = temp;
+        newNode->puzzle[xpos-1][ypos] = 0;
+        newNode->g++;
+        newNode->h = f(newNode->puzzle);
+        tree.push(newNode);
+    }      
+
+    // Moving Tile DOWN
+    if (xpos != 2) {
+        Node* newNode = new Node(n);
+        int temp = newNode->puzzle[xpos+1][ypos];
+        newNode->puzzle[xpos][ypos] = temp;
+        newNode->puzzle[xpos+1][ypos] = 0;
+        newNode->g++;
+        newNode->h = f(newNode->puzzle);
+        tree.push(newNode);
+    }
+    
+    
+    // Moving Tile LEFT
+    if (ypos != 0) {
+        Node *newNode = new Node(n);
+        int temp = newNode->puzzle[xpos][ypos-1];
+        newNode->puzzle[xpos][ypos] = temp;
+        newNode->puzzle[xpos][ypos-1] = 0;
+        newNode->g++;
+        newNode->h = f(newNode->puzzle);
+        tree.push(newNode);
+    }
+
+    
+    // Moving Tile RIGHT
+    if (ypos != 2) {
+        Node *newNode = new Node(n);
+        int temp = newNode->puzzle[xpos][ypos+1];
+        newNode->puzzle[xpos][ypos] = temp;
+        newNode->puzzle[xpos][ypos+1] = 0;
+        newNode->g++;
+        newNode->h = f(newNode->puzzle);
+        tree.push(newNode);
+    }
+}
+
+
+int MissPlacedTile(int** p) {
+    int temp = 0;
+
+    for (int i = 0; i < 3; i++) {
+        for (int j = 0; j < 3; j++) {
+            if ((p[i][j] != 0) && (p[i][j] != goal[i][j])) {
                 temp++;
             }
         }
@@ -256,17 +288,17 @@ int MissPlacedTile(const Node* n) {
 }
 
 
-int ManhattanDistance(const Node* n) {
+int ManhattanDistance(int** p) {
     int temp = 0;
     int xpos = 0;
     int ypos = 0;
 
     for (int i = 0; i < 3; i++) {
         for (int j = 0; j < 3; j++) {
-            if ((goal[i][j] != 0) && (n->puzzle[i][j] != goal[i][j])) {
+            if ((goal[i][j] != 0) && (p[i][j] != goal[i][j])) {
                 for (int k = 0; k < 3; k++) {
                     for (int m = 0; m < 3; m++) {
-                        if (n->puzzle[k][m] == goal[i][j]) {
+                        if (p[k][m] == goal[i][j]) {
                             xpos = abs(k - i);
                             ypos = abs(m - j);
                             temp += xpos + ypos;
@@ -278,5 +310,9 @@ int ManhattanDistance(const Node* n) {
     }
     
     return temp;
+}
+
+int NoHeuristic(int** p) {
+    return 0;
 }
 
