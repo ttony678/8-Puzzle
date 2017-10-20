@@ -11,11 +11,13 @@
 #include <iostream>
 #include <string>
 #include <sstream>
+#include <vector>
 #include <queue>
 #include <cstdlib>
 #include <cmath>
 using namespace std;
 
+const int SIZE = 3;
 
 const int goal[3][3]   = { { 1, 2, 3 }, 
                            { 4, 5, 6 }, 
@@ -45,9 +47,9 @@ struct Node {
         h = 0;
         parent = NULL;
 
-        puzzle = new int*[3];
-        for (int i = 0; i < 3; i++) {
-            puzzle[i] = new int[3];
+        puzzle = new int*[SIZE];
+        for (int i = 0; i < SIZE; i++) {
+            puzzle[i] = new int[SIZE];
         }
     }
 
@@ -55,13 +57,13 @@ struct Node {
     Node(int g, int h, int** newPuzzle, Node* p) 
             : g(g), h(h), parent(p) {
         
-        puzzle = new int*[3];
-        for (int i = 0; i < 3; i++) {
-            puzzle[i] = new int[3];
+        puzzle = new int*[SIZE];
+        for (int i = 0; i < SIZE; i++) {
+            puzzle[i] = new int[SIZE];
         }
 
-        for (int i = 0; i < 3; i++) {
-            for (int j = 0; j < 3; j++) {
+        for (int i = 0; i < SIZE; i++) {
+            for (int j = 0; j < SIZE; j++) {
                 puzzle[i][j] = newPuzzle[i][j];
             }
         }
@@ -70,21 +72,21 @@ struct Node {
     // Used to create more Nodes easily
     Node(Node* newNode) : g(newNode->g), h(newNode->h), parent(newNode->parent){
         
-        puzzle = new int*[3];
-        for (int i = 0; i < 3; i++) {
-            puzzle[i] = new int[3];
+        puzzle = new int*[SIZE];
+        for (int i = 0; i < SIZE; i++) {
+            puzzle[i] = new int[SIZE];
         }
 
-        for (int i = 0; i < 3; i++) {
-            for (int j = 0; j < 3; j++) {
+        for (int i = 0; i < SIZE; i++) {
+            for (int j = 0; j < SIZE; j++) {
                 puzzle[i][j] = newNode->puzzle[i][j];
             }
         }
     }
 
     bool CheckGoal() {
-        for (int i = 0; i < 3; i++) {
-            for (int j = 0; j< 3; j++) {
+        for (int i = 0; i < SIZE; i++) {
+            for (int j = 0; j< SIZE; j++) {
                 if (puzzle[i][j] != goal[i][j]) {
                     return false;
                 }
@@ -94,9 +96,17 @@ struct Node {
     }
 
     ~Node() {
-        for(int i = 0; i < 3; ++i) {
+        for(int i = 0; i < SIZE; ++i) {
             delete [] puzzle[i];
         }
+        delete [] puzzle;
+        delete parent;
+    }
+};
+
+struct CompareAge {
+    bool operator()(Node *lhs, Node *rhs) {
+        return (lhs->g + lhs->h) > (rhs->g + rhs->h);
     }
 };
 
@@ -113,14 +123,16 @@ int MissPlacedTile(int**);
 int ManhattanDistance(int**);
 int NoHeuristic(int**);
 void GeneralSearch(int**, vFunctionCall f);
-queue<Node*> tree;         // Holds the min of f(n) = g(n) + h(n)
+
+// Holds the min of f(n) = g(n) + h(n)
+priority_queue<Node*, vector<Node*>, CompareAge> tree;  
 
 
 int main() {
     int** p;
-    p = new int*[3];
-    for (int i = 0; i < 3; i++) {
-        p[i] = new int[3];
+    p = new int*[SIZE];
+    for (int i = 0; i < SIZE; i++) {
+        p[i] = new int[SIZE];
     }
 
     p[0][0] = 1;
@@ -136,9 +148,14 @@ int main() {
     GeneralSearch(p, (vFunctionCall)ManhattanDistance);    
 
     // char puzzleType = DisplayPuzzleTypeOptions();
+
+    for(int i = 0; i < SIZE; ++i) {
+            delete [] p[i];
+        }
+        delete [] p;
+
     return 0;
 }
-
 
 void GeneralSearch(int** p, vFunctionCall f) {
 
@@ -154,10 +171,8 @@ void GeneralSearch(int** p, vFunctionCall f) {
 
     Expand(init, f);
 
-
-
     while (!tree.empty()) {
-        PrintNode(tree.front());
+        PrintNode(tree.top());
         tree.pop();
     }
 
@@ -183,15 +198,14 @@ char DisplayPuzzleTypeOptions() {
     return puzzleType;
 }
 
-
 void PrintPuzzle(int** p) {
-    for (int i = 0; i < 3; i++) {
-        for (int j = 0; j < 3; j++) {
+    for (int i = 0; i < SIZE; i++) {
+        for (int j = 0; j < SIZE; j++) {
             if (p[i][j] != 0) {
                 cout << p[i][j] << " ";
             }
             else {
-                cout << "| ";
+                cout << "^ ";
             }
         }
         cout << endl;
@@ -199,14 +213,17 @@ void PrintPuzzle(int** p) {
     cout << endl;
 }
 
-
 void PrintNode(const Node* n) {
     cout << "\tUniform cost: " << n->g << endl;
     cout << "\tHeuristic Value: " << n->h << endl;
     PrintPuzzle(n->puzzle);
 }
 
-
+// This function checks if the current Node is at the goal state. If not,
+// it finds the position of the blank. Then it creates new Node's for each
+// puzzle move and updates the attributes accordingly before pushing
+// into the global priority queue. 'f' is a function pointer which 
+// holds the heuristic function. 
 void Expand(Node* n, vFunctionCall f) {
     int xpos, ypos;
 
@@ -216,8 +233,8 @@ void Expand(Node* n, vFunctionCall f) {
     }
 
     // Get x-axis and y-axis positions of blank tile
-    for (int i = 0; i < 3; i++) {
-        for (int j = 0; j < 3; j++) {
+    for (int i = 0; i < SIZE; i++) {
+        for (int j = 0; j < SIZE; j++) {
             if (n->puzzle[i][j] == 0) {
                 xpos = i;
                 ypos = j;
@@ -237,7 +254,7 @@ void Expand(Node* n, vFunctionCall f) {
     }      
 
     // Moving Tile DOWN
-    if (xpos != 2) {
+    if (xpos != SIZE-1) {
         Node* newNode = new Node(n);
         int temp = newNode->puzzle[xpos+1][ypos];
         newNode->puzzle[xpos][ypos] = temp;
@@ -261,7 +278,7 @@ void Expand(Node* n, vFunctionCall f) {
 
     
     // Moving Tile RIGHT
-    if (ypos != 2) {
+    if (ypos != SIZE-1) {
         Node *newNode = new Node(n);
         int temp = newNode->puzzle[xpos][ypos+1];
         newNode->puzzle[xpos][ypos] = temp;
@@ -272,32 +289,29 @@ void Expand(Node* n, vFunctionCall f) {
     }
 }
 
-
 int MissPlacedTile(int** p) {
     int temp = 0;
 
-    for (int i = 0; i < 3; i++) {
-        for (int j = 0; j < 3; j++) {
+    for (int i = 0; i < SIZE; i++) {
+        for (int j = 0; j < SIZE; j++) {
             if ((p[i][j] != 0) && (p[i][j] != goal[i][j])) {
                 temp++;
             }
         }
     }
-
     return temp;
 }
-
 
 int ManhattanDistance(int** p) {
     int temp = 0;
     int xpos = 0;
     int ypos = 0;
 
-    for (int i = 0; i < 3; i++) {
-        for (int j = 0; j < 3; j++) {
+    for (int i = 0; i < SIZE; i++) {
+        for (int j = 0; j < SIZE; j++) {
             if ((goal[i][j] != 0) && (p[i][j] != goal[i][j])) {
-                for (int k = 0; k < 3; k++) {
-                    for (int m = 0; m < 3; m++) {
+                for (int k = 0; k < SIZE; k++) {
+                    for (int m = 0; m < SIZE; m++) {
                         if (p[k][m] == goal[i][j]) {
                             xpos = abs(k - i);
                             ypos = abs(m - j);
@@ -308,7 +322,6 @@ int ManhattanDistance(int** p) {
             }
         }
     }
-    
     return temp;
 }
 
