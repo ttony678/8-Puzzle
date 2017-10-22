@@ -122,7 +122,7 @@ void Expand(Node*, vFunctionCall f);
 int MissPlacedTile(int**);
 int ManhattanDistance(int**);
 int NoHeuristic(int**);
-void GeneralSearch(int**, vFunctionCall f);
+Node* GeneralSearch(int**, vFunctionCall f);
 
 // Holds the min of f(n) = g(n) + h(n)
 priority_queue<Node*, vector<Node*>, CompareAge> tree;  
@@ -139,84 +139,56 @@ int main() {
     p[0][1] = 2;
     p[0][2] = 3;
     p[1][0] = 4;
-    p[1][1] = 0;
+    p[1][1] = 5;
     p[1][2] = 6;
-    p[2][0] = 7;
-    p[2][1] = 8;
-    p[2][2] = 5;
+    p[2][0] = 8;
+    p[2][1] = 7;
+    p[2][2] = 0;
 
-    GeneralSearch(p, (vFunctionCall)ManhattanDistance);    
+    Node* n = GeneralSearch(p, (vFunctionCall)MissPlacedTile); 
 
+    if (n == NULL) {
+        cout << "No solution" << endl;
+    }
     // char puzzleType = DisplayPuzzleTypeOptions();
 
     for(int i = 0; i < SIZE; ++i) {
             delete [] p[i];
         }
-        delete [] p;
-
+    delete [] p;
+    delete n;
     return 0;
 }
 
-void GeneralSearch(int** p, vFunctionCall f) {
+Node* GeneralSearch(int** p, vFunctionCall f) {
 
-    // Making node with: 
-    //     Uniform cost set to 0.
-    //     Heuristic set to an int returned by the function pointer;
-    //         Function pointer can be ManhattanDistance(),
-    //         MissPlacedTile(), or NoHeuristic().
-    //     A copy of the initial puzzle from main.
-    //     It's parent attribute set to NULL to signify root of tree.
-    Node* init = new Node(0, f(p), p, NULL);
-    tree.push(init);
-
-    Expand(init, f);
+    // Making a initial node with: 
+    // - Uniform cost set to 0.
+    // - Heuristic set to an integer returned by the function pointer;
+    //     - Function pointer can be ManhattanDistance(),
+    //       MissPlacedTile(), or NoHeuristic().
+    // - A copy of the initial puzzle from main.
+    // - It's parent attribute set to NULL to signify root of tree.
+    Node* initial = new Node(0, f(p), p, NULL);
+    tree.push(initial);
+    tree.push(initial);
+    
+    /*
+    tree.pop();
+    cout << "Tree size: " << tree.size();
+    cout << "\t Tree empty(): " << tree.empty() << endl;
+    cout << "Accessing empty tree: " << tree.top()->puzzle[0][0] << endl;;
+    */
 
     while (!tree.empty()) {
-        PrintNode(tree.top());
+        if (tree.empty()) { return NULL; }
         tree.pop();
+        // PrintNode(tree.top());
+        if (tree.top()->CheckGoal()) { return tree.top(); }
+        Expand(tree.top(), f);
     }
 
-    delete init;
-}
-
-
-char DisplayPuzzleTypeOptions() {
-    char puzzleType;
-
-    do {
-        cout << "Welcome to Luis Lopez's 8-Puzzle Solver." << endl;
-        cout << "Type '1' to use a default puzzle, or \"2\" to " <<
-                " enter your own puzzle." << endl;
-
-        cin >> puzzleType;
-        if (puzzleType != '1' && puzzleType != '2') {
-            cout << "\nError: Wrong Input" << endl << endl;
-        }
-
-    } while (puzzleType != '1' && puzzleType != '2');
-    
-    return puzzleType;
-}
-
-void PrintPuzzle(int** p) {
-    for (int i = 0; i < SIZE; i++) {
-        for (int j = 0; j < SIZE; j++) {
-            if (p[i][j] != 0) {
-                cout << p[i][j] << " ";
-            }
-            else {
-                cout << "^ ";
-            }
-        }
-        cout << endl;
-    }
-    cout << endl;
-}
-
-void PrintNode(const Node* n) {
-    cout << "\tUniform cost: " << n->g << endl;
-    cout << "\tHeuristic Value: " << n->h << endl;
-    PrintPuzzle(n->puzzle);
+    return initial;
 }
 
 // This function checks if the current Node is at the goal state. If not,
@@ -226,11 +198,6 @@ void PrintNode(const Node* n) {
 // holds the heuristic function. 
 void Expand(Node* n, vFunctionCall f) {
     int xpos, ypos;
-
-    if ( n->CheckGoal() ) {
-        cout << "Goal State Reached After Expanding" << endl;
-        exit(0);
-    }
 
     // Get x-axis and y-axis positions of blank tile
     for (int i = 0; i < SIZE; i++) {
@@ -287,6 +254,45 @@ void Expand(Node* n, vFunctionCall f) {
         newNode->h = f(newNode->puzzle);
         tree.push(newNode);
     }
+}
+
+char DisplayPuzzleTypeOptions() {
+    char puzzleType;
+
+    do {
+        cout << "Welcome to Luis Lopez's 8-Puzzle Solver." << endl;
+        cout << "Type '1' to use a default puzzle, or \"2\" to " <<
+                " enter your own puzzle." << endl;
+
+        cin >> puzzleType;
+        if (puzzleType != '1' && puzzleType != '2') {
+            cout << "\nError: Wrong Input" << endl << endl;
+        }
+
+    } while (puzzleType != '1' && puzzleType != '2');
+    
+    return puzzleType;
+}
+
+void PrintPuzzle(int** p) {
+    for (int i = 0; i < SIZE; i++) {
+        for (int j = 0; j < SIZE; j++) {
+            if (p[i][j] != 0) {
+                cout << p[i][j] << " ";
+            }
+            else {
+                cout << "^ ";
+            }
+        }
+        cout << endl;
+    }
+    cout << endl;
+}
+
+void PrintNode(const Node* n) {
+    cout << "\tUniform cost: " << n->g << endl;
+    cout << "\tHeuristic Value: " << n->h << endl;
+    PrintPuzzle(n->puzzle);
 }
 
 int MissPlacedTile(int** p) {
