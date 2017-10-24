@@ -19,23 +19,29 @@
 #include <cmath>
 using namespace std;
 
+// Abstraction
 const int SIZE = 3;
 
+// Tests
 const int goal[3][3]   = { { 1, 2, 3 }, 
                            { 4, 5, 6 }, 
                            { 7, 8, 0 } };
 
-const int vEasy[3][3]  = { { 1, 2, 3 }, 
+int vEasy[3][3]        = { { 1, 2, 3 }, 
                            { 4, 5, 6 }, 
                            { 7, 0, 8 } };
 
-const int easy[3][3]   = { { 1, 2, 0 }, 
+int easy[3][3]         = { { 1, 2, 0 }, 
                            { 4, 5, 3 }, 
                            { 7, 8, 6 } };
 
-const int doable[3][3] = { { 0, 1, 2 }, 
+int doable[3][3]       = { { 0, 1, 2 }, 
                            { 4, 5, 3 }, 
                            { 7, 8, 6 } };
+
+int ohboy[3][3]       = { { 8, 7, 1 }, 
+                           { 6, 0, 2 }, 
+                           { 5, 4, 3 } };
 
 
 struct Node {
@@ -88,18 +94,6 @@ struct Node {
         return true;
     }
 
-    bool operator==(const Node& i) const {
-        return ( puzzle[0][0] == i.puzzle[0][0] &&
-                 puzzle[0][1] == i.puzzle[0][1] &&
-                 puzzle[0][2] == i.puzzle[0][2] &&
-                 puzzle[1][0] == i.puzzle[1][0] &&
-                 puzzle[1][1] == i.puzzle[1][1] &&
-                 puzzle[1][2] == i.puzzle[1][2] &&
-                 puzzle[2][0] == i.puzzle[2][0] &&
-                 puzzle[2][1] == i.puzzle[2][1] &&
-                 puzzle[2][2] == i.puzzle[2][2]    );
-    }
-
     ~Node() {
         delete parent;
     }
@@ -112,11 +106,26 @@ struct Least {
     }
 };
 
+// Used to test equivalence of Node*'s.
+struct Equal {
+    bool operator()(Node* lhs, Node* rhs) const {
+        return ( lhs->puzzle[0][0] == rhs->puzzle[0][0] &&
+                 lhs->puzzle[0][1] == rhs->puzzle[0][1] &&
+                 lhs->puzzle[0][2] == rhs->puzzle[0][2] &&
+                 lhs->puzzle[1][0] == rhs->puzzle[1][0] &&
+                 lhs->puzzle[1][1] == rhs->puzzle[1][1] &&
+                 lhs->puzzle[1][2] == rhs->puzzle[1][2] &&
+                 lhs->puzzle[2][0] == rhs->puzzle[2][0] &&
+                 lhs->puzzle[2][1] == rhs->puzzle[2][1] &&
+                 lhs->puzzle[2][2] == rhs->puzzle[2][2]    );
+    }
+};
+
+// Overriding the hash function by creating a unique string
+// for each Node depending on the puzzle.
 struct KeyHasher {
-    std::size_t operator() (const Node& n) const  {
+    size_t operator() (const Node& n) const  {
         string temp;
-        temp += to_string(n.g);
-        temp += to_string(n.h);
         for (int i = 0; i < SIZE; i++) {
             for (int j = 0; j < SIZE; j++) {
                 string s = to_string(n.puzzle[i][j]);
@@ -140,7 +149,8 @@ int ManhattanDistance(int[][SIZE]);
 int NoHeuristic(int[][SIZE]);
 Node* GeneralSearch(int[][SIZE], vFunctionCall f);
 
-priority_queue<Node*, vector<Node*>, Least> pq;  
+priority_queue<Node*, vector<Node*>, Least> pq; 
+unordered_map<Node*, bool, KeyHasher, Equal> visited; 
 int nodes_dequeued = 0;
 
 int main() {
@@ -148,42 +158,16 @@ int main() {
 
     p[0][0] = 1;
     p[0][1] = 2;
-    p[0][2] = 3;
+    p[0][2] = 0;
     p[1][0] = 4;
     p[1][1] = 5;
-    p[1][2] = 6;
+    p[1][2] = 3;
     p[2][0] = 7;
     p[2][1] = 8;
-    p[2][2] = 0;
-
-    int t[SIZE][SIZE];
-
-    t[0][0] = 1;
-    t[0][1] = 2;
-    t[0][2] = 3;
-    t[1][0] = 4;
-    t[1][1] = 5;
-    t[1][2] = 6;
-    t[2][0] = 7;
-    t[2][1] = 8;
-    t[2][2] = 0;
+    p[2][2] = 6;
 
 
-    Node* a = new Node(0, 0, p, NULL);
-    Node* b = new Node(0, 0, t, NULL); 
-
-    cout << "Hash of a: " << KeyHasher{}(a) << endl;
-    cout << "Hash of b: " << KeyHasher{}(b) << endl;
-
-    unordered_map<Node, bool, KeyHasher> mp;
-    mp[*a] = true;
-
-    cout << "Hash table lookup of a: " << mp[*a] << endl;
-    cout << "Hash table lookup of b: " << mp[*b] << endl;
-
-
-
-    Node* n = GeneralSearch(p, (vFunctionCall)MissPlacedTile); 
+    Node* n = GeneralSearch(ohboy, (vFunctionCall)ManhattanDistance); 
 
     if (n != NULL) {
         cout << "Goal!!" << endl << endl;
@@ -197,6 +181,7 @@ int main() {
 
     // char puzzleType = DisplayPuzzleTypeOptions();
 
+    cout << "Address of goal node: " << n->parent << endl;
    
     delete n;
     return 0;
@@ -219,10 +204,16 @@ Node* GeneralSearch(int p[][SIZE], vFunctionCall f) {
     while (!pq.empty()) {
         if (pq.empty()) { return NULL; }
         pq.pop();
-        ++nodes_dequeued;
-        PrintNode(pq.top());
-        if (pq.top()->CheckGoal()) { return pq.top(); }
-        Expand(pq.top(), f);
+        if ( visited[pq.top()] ) { 
+            // DO NOTHING ALREADY VISITED 
+        }
+        else {
+            ++nodes_dequeued;           // Incrementing Nodes Dequeued
+            PrintNode(pq.top());
+            if (pq.top()->CheckGoal()) { return pq.top(); }
+            Expand(pq.top(), f);
+            visited[pq.top()] = true;    // Hashing the already expanded Node*
+        }
     }
 }
 
@@ -321,13 +312,13 @@ void PrintPuzzle(int p[][SIZE]) {
         }
         cout << endl;
     }
-    cout << endl;
 }
 
 void PrintNode(Node* n) {
-    cout << "\tUniform cost: " << n->g << endl;
-    cout << "\tHeuristic Value: " << n->h << endl;
+    cout << "Best state to expand with g(n) = " << n->g << " and ";
+    cout << "h(n) = " << n->h << " is..." << endl;
     PrintPuzzle(n->puzzle);
+    cout << "Expanding this node..." << endl << endl;
 }
 
 int MissPlacedTile(int p[][SIZE]) {
