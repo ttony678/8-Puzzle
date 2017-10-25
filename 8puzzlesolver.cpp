@@ -375,8 +375,6 @@ void PopulateUserPuzzle(int p[][SIZE]) {
     cout << "\tEnter the third row, use space or tabs between numbers\t";
     getline(cin, row2);
 
-    cout << row0 << " " << row1 << " " << row2;
-
     // Got the idea to subtract the character '0' from:
     // https://stackoverflow.com/questions/439573/
     //     how-to-convert-a-single-char-into-an-int
