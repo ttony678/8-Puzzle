@@ -151,6 +151,7 @@ void PrintPuzzle(int[][SIZE]);
 void PrintNode(Node*);
 void PrintGoal(Node*);
 void Expand(Node*, FunctionName f);
+void BackTrace(Node*);
 int MissPlacedTile(int[][SIZE]);
 int ManhattanDistance(int[][SIZE]);
 int NoHeuristic(int[][SIZE]);
@@ -170,13 +171,13 @@ int main() {
     // Default Puzzle
     p[0][0] = 1;
     p[0][1] = 2;
-    p[0][2] = 0;
+    p[0][2] = 3;
     p[1][0] = 4;
-    p[1][1] = 5;
-    p[1][2] = 3;
+    p[1][1] = 0;
+    p[1][2] = 6;
     p[2][0] = 7;
-    p[2][1] = 8;
-    p[2][2] = 6;
+    p[2][1] = 5;
+    p[2][2] = 8;
 
     // Menu and Display Options
     puzzleType = DisplayPuzzleTypeOptions();
@@ -212,6 +213,9 @@ int main() {
     }
 
     PrintGoal(n);
+	
+	cout << endl;
+	BackTrace(n);
    
     delete n;
     return 0;
@@ -425,6 +429,27 @@ void PrintGoal(Node* n) {
         cout << "Also, the max # of nodes in the queue at any one time " <<
                 "was " << max_queue << "." << endl;
     }
+}
+
+void BackTrace(Node* n) {
+	vector<Node*> list;
+	
+	if (n != NULL ) {
+		
+		cout << "Solving the puzzle with these moves: " << endl;
+		
+		while (n != NULL) {
+			list.insert(list.begin(), n);
+			n = n->parent;
+		}
+		
+		PrintNode(list.at(0));		
+		for (int i = 1; i < list.size(); i++) {
+			cout << endl << "  | " << endl;
+			cout << "  V " << endl << endl;
+			PrintNode(list.at(i));
+		}
+	}
 }
 
 int MissPlacedTile(int p[][SIZE]) {
