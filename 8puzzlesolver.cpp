@@ -214,8 +214,8 @@ int main() {
 
     PrintGoal(n);
 	
-	cout << endl;
-	BackTrace(n);
+    cout << endl;
+    BackTrace(n);
    
     delete n;
     return 0;
@@ -231,10 +231,16 @@ Node* GeneralSearch(int p[][SIZE], FunctionName f) {
     // - The initial puzzle (2D Array) from main.
     // - It's parent attribute set to NULL to signify root of tree.
     Node* initial = new Node(0, f(p), p, NULL);
+
+    if (initial->CheckGoal()) { return initial; }
+
     cout << endl << "Expanding state: " << endl;
     PrintNode(initial);
     cout << endl;
+
     Expand(initial, f);
+    ++nodes_dequeued;           // Incrementing Node's expanded
+    visited[initial] = true;
     
     while (!pq.empty()) {
         // Checking maximum # of Nodes in the queue at anyone time.
@@ -244,15 +250,16 @@ Node* GeneralSearch(int p[][SIZE], FunctionName f) {
             // DO NOTHING, WE'VE SEEN THIS NODE'S PUZZLE STATE
         }
         else {
-
-            cout << "Best state to expand with g(n) = " << pq.top()->g;
-            cout << " and h(n) = " << pq.top()->h << " is..." << endl;
-            PrintNode(pq.top());
-            cout << "Expanding this node..." << endl << endl;
-            
+                        
             if (pq.top()->CheckGoal()) { return pq.top(); }
+
+            // cout << "Best state to expand with g(n) = " << pq.top()->g;
+            // cout << " and h(n) = " << pq.top()->h << " is..." << endl;
+            // PrintNode(pq.top());
+            // cout << "Expanding this node..." << endl << endl;
+
             Expand(pq.top(), f);        // Expanding if not goal state.
-            ++nodes_dequeued;           // Incrementing Nodes Dequeued.
+            ++nodes_dequeued;           // Incrementing Node's expanded
             visited[pq.top()] = true;   // Hashing the already expanded Node*.
         }
         pq.pop();
