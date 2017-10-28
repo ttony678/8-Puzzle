@@ -231,14 +231,15 @@ Node* GeneralSearch(int p[][SIZE], FunctionName f) {
     // - The initial puzzle (2D Array) from main.
     // - It's parent attribute set to NULL to signify root of tree.
     Node* initial = new Node(0, f(p), p, NULL);
-    pq.push(initial);
-    pq.push(initial);
+    cout << endl << "Expanding state: " << endl;
+    PrintNode(initial);
+    cout << endl;
+    Expand(initial, f);
     
     while (!pq.empty()) {
         // Checking maximum # of Nodes in the queue at anyone time.
         if (pq.size() > max_queue) { max_queue = pq.size(); }
 
-        pq.pop();
         if ( visited[pq.top()] ) { 
             // DO NOTHING, WE'VE SEEN THIS NODE'S PUZZLE STATE
         }
@@ -254,6 +255,7 @@ Node* GeneralSearch(int p[][SIZE], FunctionName f) {
             ++nodes_dequeued;           // Incrementing Nodes Dequeued.
             visited[pq.top()] = true;   // Hashing the already expanded Node*.
         }
+        pq.pop();
     }
     return NULL;
 }
@@ -436,7 +438,7 @@ void BackTrace(Node* n) {
 	
 	if (n != NULL ) {
 		
-		cout << "Solving the puzzle with these moves: " << endl;
+		cout << "Solved the puzzle with these moves: " << endl;
 		
 		while (n != NULL) {
 			list.insert(list.begin(), n);
