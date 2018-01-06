@@ -24,31 +24,7 @@ using namespace std;
 const int SIZE = 3;
 
 // Ending Condition
-const int goal[3][3]   = { { 1, 2, 3 }, 
-                           { 4, 5, 6 }, 
-                           { 7, 8, 0 } };
-
-// Test Cases
-int vEasy[3][3]        = { { 1, 2, 3 }, 
-                           { 4, 5, 6 }, 
-                           { 7, 0, 8 } };
-
-int easy[3][3]         = { { 1, 2, 0 }, 
-                           { 4, 5, 3 }, 
-                           { 7, 8, 6 } };
-
-int doable[3][3]       = { { 0, 1, 2 }, 
-                           { 4, 5, 3 }, 
-                           { 7, 8, 6 } };
-
-int ohboy[3][3]        = { { 8, 7, 1 }, 
-                           { 6, 0, 2 }, 
-                           { 5, 4, 3 } };
-
-int impossible[3][3]   = { { 1, 2, 3 }, 
-                           { 4, 5, 6 }, 
-                           { 8, 7, 0 } };
-
+int goal[SIZE][SIZE];
 
 struct Node {
     int g;                  // Holds g(n) for uniform function
@@ -128,15 +104,14 @@ struct KeyHasher {
 // Used to test equivalence of Node*'s for the hash table.
 struct Equal {
     bool operator()(Node* lhs, Node* rhs) const {
-        return ( lhs->puzzle[0][0] == rhs->puzzle[0][0] &&
-                 lhs->puzzle[0][1] == rhs->puzzle[0][1] &&
-                 lhs->puzzle[0][2] == rhs->puzzle[0][2] &&
-                 lhs->puzzle[1][0] == rhs->puzzle[1][0] &&
-                 lhs->puzzle[1][1] == rhs->puzzle[1][1] &&
-                 lhs->puzzle[1][2] == rhs->puzzle[1][2] &&
-                 lhs->puzzle[2][0] == rhs->puzzle[2][0] &&
-                 lhs->puzzle[2][1] == rhs->puzzle[2][1] &&
-                 lhs->puzzle[2][2] == rhs->puzzle[2][2]    );
+        for (unsigned i = 0; i < SIZE; i++) {
+            for (unsigned j = 0; j < SIZE; j++) {
+                if (lhs->puzzle[i][j] != rhs->puzzle[i][j]) {
+                    return 0;
+                }
+            }
+        }
+        return 1;
     }
 };
 
@@ -152,6 +127,7 @@ void PrintNode(Node*);
 void PrintGoal(Node*);
 void Expand(Node*, FunctionName f);
 void BackTrace(Node*);
+void createGoal();
 int MissPlacedTile(int[][SIZE]);
 int ManhattanDistance(int[][SIZE]);
 int NoHeuristic(int[][SIZE]);
@@ -160,7 +136,7 @@ Node* GeneralSearch(int[][SIZE], FunctionName f);
 priority_queue<Node*, vector<Node*>, Least> pq; 
 unordered_map<Node*, bool, KeyHasher, Equal> visited; 
 int nodes_dequeued = 0;
-int max_queue = 0;
+unsigned max_queue = 0;
 
 int main() {
     Node* n;
@@ -168,16 +144,37 @@ int main() {
     char algorithmType;
     char puzzleType;
 
-    // Default Puzzle
-    p[0][0] = 1;
-    p[0][1] = 2;
-    p[0][2] = 3;
-    p[1][0] = 4;
-    p[1][1] = 0;
-    p[1][2] = 6;
-    p[2][0] = 7;
-    p[2][1] = 5;
-    p[2][2] = 8;
+    // Default Puzzle 4x4
+    // p[0][0] = 1;
+    // p[0][1] = 2;
+    // p[0][2] = 3;
+    // p[0][3] = 4;
+    // p[1][0] = 5;
+    // p[1][1] = 6;
+    // p[1][2] = 7;
+    // p[1][3] = 0;
+    // p[2][0] = 9;
+    // p[2][1] = 10;
+    // p[2][2] = 11;
+    // p[2][3] = 8;
+    // p[3][0] = 13;
+    // p[3][1] = 14;
+    // p[3][2] = 15;
+    // p[3][3] = 12;
+
+    // Default Puzzle 3x3
+    p[0][0] = 8; 
+    p[0][1] = 7; 
+    p[0][2] = 1; 
+    p[1][0] = 6; 
+    p[1][1] = 0; 
+    p[1][2] = 2; 
+    p[2][0] = 5; 
+    p[2][1] = 4; 
+    p[2][2] = 3; 
+
+    // Creating Goal State
+    createGoal();
 
     // Menu and Display Options
     puzzleType = DisplayPuzzleTypeOptions();
@@ -234,9 +231,9 @@ Node* GeneralSearch(int p[][SIZE], FunctionName f) {
 
     if (initial->CheckGoal()) { return initial; }
 
-    cout << endl << "Expanding state: " << endl;
-    PrintNode(initial);
-    cout << endl;
+    // cout << endl << "Expanding state: " << endl;
+    // PrintNode(initial);
+    // cout << endl;
 
     Expand(initial, f);
     ++nodes_dequeued;           // Incrementing Node's expanded
@@ -376,30 +373,29 @@ char DisplayAlgorithmOptions() {
 }
 
 void PopulateUserPuzzle(int p[][SIZE]) {
-    string row0;
-    string row1;
-    string row2;
+    string row;
+    vector<int> userInput;
+    vector< vector<int> > totalUserInput;
 
     cout << "\tEnter your puzzle, use a zero to represent the blank" << endl;
-    cout << "\tEnter the first row, use space or tabs between numbers\t";
-    getline(cin, row0);
-    cout << "\tEnter the second row, use space or tabs between numbers\t";
-    getline(cin, row1);
-    cout << "\tEnter the third row, use space or tabs between numbers\t";
-    getline(cin, row2);
 
-    // Got the idea to subtract the character '0' from:
-    // https://stackoverflow.com/questions/439573/
-    //     how-to-convert-a-single-char-into-an-int
-    p[0][0] = row0[0] - '0';
-    p[0][1] = row0[2] - '0';
-    p[0][2] = row0[4] - '0';
-    p[1][0] = row1[0] - '0';
-    p[1][1] = row1[2] - '0';
-    p[1][2] = row1[4] - '0';
-    p[2][0] = row2[0] - '0';
-    p[2][1] = row2[2] - '0';
-    p[2][2] = row2[4] - '0';
+    for (unsigned i = 0; i < SIZE; i++) {
+        cout << "\tEnter the " << i+1 << " row, use space or tabs between numbers\t";
+        getline(cin, row);
+        stringstream ss(row);
+        int x = 0;
+        while (ss >> x) {
+            userInput.push_back(x);
+        }
+        totalUserInput.push_back(userInput);
+        userInput.clear();
+    }
+    
+    for (unsigned i = 0; i < SIZE; i++) {
+        for (unsigned j = 0; j < SIZE; j++) {
+            p[i][j] = totalUserInput.at(i).at(j); 
+        }
+    }
 
     cout << endl<< endl;
 }
@@ -453,7 +449,7 @@ void BackTrace(Node* n) {
 		}
 		
 		PrintNode(list.at(0));		
-		for (int i = 1; i < list.size(); i++) {
+		for (unsigned i = 1; i < list.size(); i++) {
 			cout << endl << "  | " << endl;
 			cout << "  V " << endl << endl;
 			PrintNode(list.at(i));
@@ -501,3 +497,14 @@ int NoHeuristic(int p[][SIZE]) {
     return 0;
 }
 
+void createGoal() {
+    int temp = 1;
+    for (unsigned i = 0; i < SIZE; i++) {
+        for (unsigned j = 0; j < SIZE; j++) {
+            if (!(i == SIZE-1 && j == SIZE-1))
+                goal[i][j] = temp++; 
+            else 
+                goal[i][j] = 0;
+        }
+    }
+}
